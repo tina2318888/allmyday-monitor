@@ -1,3 +1,5 @@
+const { chromium } = require("playwright");
+
 const TARGETS = [
   {
     name: "合照",
@@ -9,26 +11,41 @@ const TARGETS = [
   }
 ];
 
-async function check() {
+async function run() {
+  const browser = await chromium.launch({
+    headless: true
+  });
+
+  const page = await browser.newPage({
+    userAgent:
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/137 Safari/537.36",
+    locale: "zh-TW"
+  });
+
   for (const item of TARGETS) {
+    console.log("開始檢查：", item.name);
+
     try {
-      const res = await fetch(item.url, {
-        headers: {
-          "User-Agent":
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/137 Safari/537.36"
-        }
+      await page.goto(item.url, {
+        waitUntil: "networkidle",
+        timeout: 60000
       });
 
-      console.log(item.name, res.status);
+      await page.waitForTimeout(8000);
 
-      const html = await res.text();
+      const title = await page.title();
+      const text = await page.locator("body").innerText();
 
-      // 先把網頁存下來，之後我們再抓真正的數量
-      console.log(html.substring(0, 500));
-    } catch (e) {
-      console.error(item.name, e);
+      console.log(item.name, "標題：", title);
+      console.log(item.name, "內容前500字：");
+      console.log(text.slice(0, 500));
+
+    } catch (err) {
+      console.log(item.name, "錯誤：", err.message);
     }
   }
+
+  await browser.close();
 }
 
-check();
+run();
